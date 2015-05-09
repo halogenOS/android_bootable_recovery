@@ -1280,10 +1280,12 @@ static int PerformCommandErase(CommandParameters& params) {
       // length in bytes
       blocks[1] = (range.second - range.first) * static_cast<uint64_t>(BLOCKSIZE);
 
-      if (ioctl(params.fd, BLKDISCARD, &blocks) == -1) {
-        PLOG(ERROR) << "BLKDISCARD ioctl failed";
-        return -1;
-      }
+#ifndef SUPPRESS_EMMC_WIPE
+        if (ioctl(params.fd, BLKDISCARD, &blocks) == -1) {
+          PLOG(ERROR) << "BLKDISCARD ioctl failed";
+          return -1;
+        }
+#endif
     }
   }
 
