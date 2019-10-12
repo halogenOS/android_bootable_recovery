@@ -783,7 +783,7 @@ static void setup_adbd() {
   }
 
   // Trigger (re)start of adb daemon
-  property_set("aosip.service.adb.root", "1");
+  property_set("custom.service.adb.root", "1");
 }
 
 
