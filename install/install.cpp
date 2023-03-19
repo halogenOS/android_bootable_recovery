@@ -371,6 +371,16 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   auto zip = package->GetZipArchiveHandle();
   bool has_metadata = ReadMetadataFromPackage(zip, &metadata);
 
+  ui->Print("----------------------------------------------\n");
+  ui->Print("              Welcome to halogenOS\n");
+  ui->Print("----------------------------------------------\n");
+  ui->Print(" SDK Level:   %s\n", has_metadata ? get_value(metadata, "post-sdk-level").c_str() : "Unknown");
+  ui->Print(" Build ID:    %s\n", has_metadata ? get_value(metadata, "post-build-incremental").c_str() : "Unknown");
+  ui->Print(" Build Date:  %s\n", has_metadata ? get_value(metadata, "post-timestamp").c_str() : "Unknown");
+  ui->Print(" SP:          %s\n", has_metadata ? get_value(metadata, "post-security-patch-level").c_str() : "Unknown");
+  ui->Print(" Codename:    %s\n", has_metadata ? get_value(metadata, "pre-device").c_str() : "Unknown");
+  ui->Print("----------------------------------------------\n");
+
   bool package_is_ab = has_metadata && get_value(metadata, "ota-type") == OtaTypeToString(OtaType::AB);
   bool device_supports_ab = android::base::GetBoolProperty("ro.build.ab_update", false);
   bool ab_device_supports_nonab = true;
