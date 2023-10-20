@@ -50,7 +50,7 @@ cc_library {
     ],
 
     shared_libs: [
-        "android.hardware.health-V1-ndk",
+        "android.hardware.health-V2-ndk",
         "libbase",
         "libcutils",
         "libhidlbase",
