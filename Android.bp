@@ -61,6 +61,8 @@ cc_defaults {
 
         "-Wall",
         "-Werror",
+
+	"-O3",
     ],
 }
 
