@@ -394,6 +394,7 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   auto zip = package->GetZipArchiveHandle();
   bool has_metadata = ReadMetadataFromPackage(zip, &metadata);
 
+  const bool package_is_ab = has_metadata && get_value(metadata, "ota-type") == OtaTypeToString(OtaType::AB);
   const bool package_is_brick = get_value(metadata, "ota-type") == OtaTypeToString(OtaType::BRICK);
   if (package_is_brick) {
     LOG(INFO) << "Installing a brick package";
@@ -417,7 +418,6 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   ui->Print(" Device:      %s\n", has_metadata ? get_value(metadata, "pre-device").c_str() : "Unknown");
   ui->Print("----------------------------------------------\n");
 
-  bool package_is_ab = has_metadata && get_value(metadata, "ota-type") == OtaTypeToString(OtaType::AB);
   bool device_supports_ab = android::base::GetBoolProperty("ro.build.ab_update", false);
   bool ab_device_supports_nonab = true;
   bool device_only_supports_ab = device_supports_ab && !ab_device_supports_nonab;
@@ -426,6 +426,21 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   const auto current_spl = android::base::GetProperty("ro.build.version.security_patch", "");
   if (ViolatesSPLDowngrade(zip, current_spl)) {
     LOG(WARNING) << "This is SPL downgrade";
+  }
+
+  const auto reboot_to_recovery = [] {
+    if (std::string err; !clear_bootloader_message(&err)) {
+      LOG(ERROR) << "Failed to clear BCB message: " << err;
+    }
+    Reboot("recovery");
+  };
+
+  static bool ab_package_installed = false;
+  if (ab_package_installed) {
+    if (ask_to_ab_reboot(device)) {
+      reboot_to_recovery();
+    }
+    return INSTALL_ERROR;
   }
 
   const auto reboot_to_recovery = [] {
