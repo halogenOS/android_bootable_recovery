@@ -443,21 +443,6 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
     return INSTALL_ERROR;
   }
 
-  const auto reboot_to_recovery = [] {
-    if (std::string err; !clear_bootloader_message(&err)) {
-      LOG(ERROR) << "Failed to clear BCB message: " << err;
-    }
-    Reboot("recovery");
-  };
-
-  static bool ab_package_installed = false;
-  if (ab_package_installed) {
-    if (ask_to_ab_reboot(device)) {
-      reboot_to_recovery();
-    }
-    return INSTALL_ERROR;
-  }
-
   if (package_is_ab) {
     CHECK(package->GetType() == PackageType::kFile);
   }
