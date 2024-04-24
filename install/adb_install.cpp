@@ -208,8 +208,8 @@ static void ListenAndExecuteMinadbdCommands(
     return;
   }
 
-  // Set the timeout to be 300s when waiting for minadbd commands.
-  constexpr int TIMEOUT_MILLIS = 300 * 1000;
+  // Set the timeout when waiting for minadbd commands.
+  constexpr int TIMEOUT_MILLIS = 900 * 1000;
   while (true) {
     // Reset the progress bar and the background image before each command.
     ui->SetProgressType(RecoveryUI::EMPTY);
