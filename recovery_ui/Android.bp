@@ -43,8 +43,6 @@ cc_library {
     export_include_dirs: ["include"],
 
     static_libs: [
-        "libbatterymonitor",
-        "libhealthloop",
         "libminui",
         "libotautil",
     ],
@@ -52,10 +50,7 @@ cc_library {
     shared_libs: [
         "android.hardware.health-V2-ndk",
         "libbase",
-        "libcutils",
-        "libhidlbase",
         "libpng",
-        "libutils",
         "libz",
         "libvolume_manager",
     ],
