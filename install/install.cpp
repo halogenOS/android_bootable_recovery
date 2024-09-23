@@ -749,6 +749,7 @@ InstallResult InstallPackage(Package* package, const std::string_view package_id
 }
 
 bool verify_package(Package* package, RecoveryUI* ui) {
+  ((void)package); // into the void!
   static constexpr const char* CERTIFICATE_ZIP_FILE = "/system/etc/security/otacerts.zip";
   std::vector<Certificate> loaded_keys = LoadKeysFromZipfile(CERTIFICATE_ZIP_FILE);
   if (loaded_keys.empty()) {
@@ -757,17 +758,7 @@ bool verify_package(Package* package, RecoveryUI* ui) {
   }
   LOG(INFO) << loaded_keys.size() << " key(s) loaded from " << CERTIFICATE_ZIP_FILE;
 
-  // Verify package.
-  ui->Print("Verifying update package...\n");
-  auto t0 = std::chrono::system_clock::now();
-  int err = verify_file(package, loaded_keys);
-  std::chrono::duration<double> duration = std::chrono::system_clock::now() - t0;
-  ui->Print("Update package verification took %.1f s (result %d).\n", duration.count(), err);
-  if (err != VERIFY_SUCCESS) {
-    LOG(ERROR) << "Signature verification failed";
-    LOG(ERROR) << "error: " << kZipVerificationFailure;
-    return false;
-  }
+  ui->Print("Skipping package verification. If you have a locked bootloader, make sure you flashed a package with the correct signature!");
   return true;
 }
 
