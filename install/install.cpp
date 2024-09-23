@@ -758,7 +758,7 @@ bool verify_package(Package* package, RecoveryUI* ui) {
   }
   LOG(INFO) << loaded_keys.size() << " key(s) loaded from " << CERTIFICATE_ZIP_FILE;
 
-  ui->Print("Skipping package verification. If you have a locked bootloader, make sure you flashed a package with the correct signature!");
+  ui->Print("Skipping package verification. If you have a locked bootloader, make sure you flashed a package with the correct signature!\n\n");
   return true;
 }
 
