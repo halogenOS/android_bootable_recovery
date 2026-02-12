@@ -156,8 +156,7 @@ static void ReadSourceTargetBuild(const std::map<std::string, std::string>& meta
 // Checks the build version, fingerprint and timestamp in the metadata of the A/B package.
 // Downgrading is not allowed unless explicitly enabled in the package and only for
 // incremental packages.
-static bool CheckAbSpecificMetadata(const std::map<std::string, std::string>& metadata,
-                                    bool spl_downgrade_approved) {
+static bool CheckAbSpecificMetadata(const std::map<std::string, std::string>& metadata) {
   // Incremental updates should match the current build.
   auto device_pre_build = android::base::GetProperty("ro.build.version.incremental", "");
   auto pkg_pre_build = get_value(metadata, "pre-build-incremental");
@@ -207,8 +206,7 @@ static bool CheckAbSpecificMetadata(const std::map<std::string, std::string>& me
   return true;
 }
 
-bool CheckPackageMetadata(const std::map<std::string, std::string>& metadata, OtaType ota_type,
-                          bool spl_downgrade_approved) {
+bool CheckPackageMetadata(const std::map<std::string, std::string>& metadata, OtaType ota_type) {
   auto package_ota_type = get_value(metadata, "ota-type");
   auto expected_ota_type = OtaTypeToString(ota_type);
   if (ota_type != OtaType::AB && ota_type != OtaType::BRICK) {
@@ -265,7 +263,7 @@ bool CheckPackageMetadata(const std::map<std::string, std::string>& metadata, Ot
   }
 
   if (ota_type == OtaType::AB) {
-    return CheckAbSpecificMetadata(metadata, spl_downgrade_approved);
+    return CheckAbSpecificMetadata(metadata);
   }
 
   return true;
@@ -422,7 +420,6 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   bool device_only_supports_ab = device_supports_ab && !ab_device_supports_nonab;
   bool device_supports_virtual_ab = android::base::GetBoolProperty("ro.virtual_ab.enabled", false);
 
-  bool spl_downgrade_approved = false;
   const auto allow_spl_downgrade =
       android::base::GetBoolProperty("persist.vendor.recovery_allow_spl_downgrade", false);
   const auto current_spl = android::base::GetProperty("ro.build.version.security_patch", "");
@@ -435,7 +432,6 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
       LOG(ERROR) << "User denied SPL downgrade";
       return INSTALL_ERROR;
     }
-    spl_downgrade_approved = true;
   }
 
   const auto reboot_to_recovery = [] {
@@ -462,7 +458,7 @@ static InstallResult TryUpdateBinary(Package* package, bool* wipe_cache,
   // Package does not declare itself as an A/B package, but device only supports A/B;
   //   still calls CheckPackageMetadata to get a meaningful error message.
   if (package_is_ab || device_only_supports_ab) {
-    if (!CheckPackageMetadata(metadata, OtaType::AB, spl_downgrade_approved)) {
+    if (!CheckPackageMetadata(metadata, OtaType::AB)) {
       log_buffer->push_back(android::base::StringPrintf("error: %d", kUpdateBinaryCommandFailure));
       return INSTALL_ERROR;
     }
