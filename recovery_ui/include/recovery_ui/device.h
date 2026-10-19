@@ -25,7 +25,8 @@
 #include <string>
 #include <vector>
 
-#include "ui.h"
+// Forward declaration to avoid including "ui.h".
+class RecoveryUI;
 
 class BootState;
 
@@ -40,7 +41,6 @@ class Device {
   static constexpr const int kDoSideload = -7;
   static constexpr const int kScrollUp = -8;
   static constexpr const int kScrollDown = -9;
-  static constexpr const int kRefresh = -10;
   static constexpr const int kHighlightFirst = -11;
   static constexpr const int kHighlightLast = -12;
 
@@ -51,7 +51,7 @@ class Device {
   enum BuiltinAction {
     NO_ACTION = 0,
     REBOOT = 1,
-    APPLY_UPDATE = 2,
+    // APPLY_UPDATE was 2.
     // APPLY_CACHE was 3.
     APPLY_ADB_SIDELOAD = 4,
     WIPE_DATA = 5,
@@ -166,10 +166,6 @@ class Device {
   // the caller's responsibility to perform the check and handle the exception.
   std::optional<std::string> GetReason() const;
   std::optional<std::string> GetStage() const;
-
-  virtual void handleVolumeChanged() {
-    ui_->onVolumeChanged();
-  }
 
  private:
   // The RecoveryUI object that should be used to display the user interface for this device.

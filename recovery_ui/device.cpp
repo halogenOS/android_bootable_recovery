@@ -32,7 +32,7 @@ typedef std::pair<std::string, Device::BuiltinAction> menu_action_t;
 static std::vector<std::string> g_main_header{};
 static std::vector<menu_action_t> g_main_actions{
   { "Reboot system now", Device::REBOOT },
-  { "Apply update", Device::APPLY_UPDATE },
+  { "Apply update", Device::APPLY_ADB_SIDELOAD },
   { "Factory reset", Device::MENU_WIPE },
   { "Advanced", Device::MENU_ADVANCED },
 };
@@ -180,9 +180,6 @@ int Device::HandleMenuKey(int key, bool visible) {
 
     case KEY_AGAIN:
       return kDoSideload;
-
-    case KEY_REFRESH:
-      return kRefresh;
 
     default:
       // If you have all of the above buttons, any other buttons

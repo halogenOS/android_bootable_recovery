@@ -57,7 +57,6 @@ cc_library {
         "libpng",
         "libutils",
         "libz",
-        "libvolume_manager",
     ],
 }
 
