@@ -144,8 +144,7 @@ void WearRecoveryUI::draw_screen_locked() {
 }
 
 void WearRecoveryUI::draw_circle_foreground_locked() {
-    if (current_icon_ != NONE) {
-        const auto& frame = GetCurrentFrame();
+    if (const GRSurface* frame = GetCurrentFrame(); frame != nullptr) {
         int frame_width = gr_get_width(frame);
         int frame_height = gr_get_height(frame);
         int frame_x = (ScreenWidth() - frame_width) / 2;
@@ -171,7 +170,6 @@ void WearRecoveryUI::draw_circle_foreground_locked() {
 }
 
 void WearRecoveryUI::LoadAnimation() {
-  ScreenRecoveryUI::LoadAnimation();
   std::unique_ptr<DIR, decltype(&closedir)> dir(opendir(Paths::Get().resource_dir().c_str()),
                                                 closedir);
   dirent* de;

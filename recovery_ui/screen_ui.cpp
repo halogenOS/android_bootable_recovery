@@ -16,7 +16,6 @@
 
 #include "recovery_ui/screen_ui.h"
 
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
@@ -49,7 +48,6 @@
 #include <healthd/BatteryMonitor.h>
 
 #include "minui/minui.h"
-#include "otautil/paths.h"
 #include "recovery_ui/device.h"
 #include "recovery_ui/ui.h"
 
@@ -397,8 +395,6 @@ ScreenRecoveryUI::ScreenRecoveryUI()
       blank_unblank_on_init_(
           android::base::GetBoolProperty("ro.recovery.ui.blank_unblank_on_init", false)),
       current_icon_(NONE),
-      current_frame_(0),
-      intro_done_(false),
       progressBarType(EMPTY),
       progressScopeStart(0),
       progressScopeSize(0),
@@ -435,10 +431,10 @@ ScreenRecoveryUI::~ScreenRecoveryUI() {
 }
 
 const GRSurface* ScreenRecoveryUI::GetCurrentFrame() const {
-  if (current_icon_ == INSTALLING_UPDATE || current_icon_ == ERASING) {
-    return intro_done_ ? loop_frames_[current_frame_].get() : intro_frames_[current_frame_].get();
+  if (current_icon_ == ERROR || current_icon_ == NO_COMMAND) {
+    return error_icon_.get();
   }
-  return error_icon_.get();
+  return nullptr;
 }
 
 const GRSurface* ScreenRecoveryUI::GetCurrentText() const {
@@ -474,6 +470,7 @@ int ScreenRecoveryUI::PixelsFromDp(int dp) const {
 
 // Note that "baseline" is actually the *top* of each icon (because that's how our drawing routines
 // work), so that's the more useful measurement for calling code. We use even top and bottom gaps.
+// Screens without an icon leave out the icon and the gap below it.
 
 enum Layout { PORTRAIT = 0, PORTRAIT_LARGE = 1, LANDSCAPE = 2, LANDSCAPE_LARGE = 3, LAYOUT_MAX };
 enum Dimension { TEXT = 0, ICON = 1, DIMENSION_MAX };
@@ -486,7 +483,7 @@ static constexpr int kLayouts[LAYOUT_MAX][DIMENSION_MAX] = {
 
 int ScreenRecoveryUI::GetAnimationBaseline() const {
   return GetTextBaseline() - PixelsFromDp(kLayouts[layout_][ICON]) -
-         gr_get_height(loop_frames_[0].get());
+         gr_get_height(GetCurrentFrame());
 }
 
 int ScreenRecoveryUI::GetTextBaseline() const {
@@ -495,9 +492,11 @@ int ScreenRecoveryUI::GetTextBaseline() const {
 }
 
 int ScreenRecoveryUI::GetProgressBaseline() const {
-  int elements_sum = gr_get_height(loop_frames_[0].get()) + PixelsFromDp(kLayouts[layout_][ICON]) +
-                     gr_get_height(installing_text_.get()) + PixelsFromDp(kLayouts[layout_][TEXT]) +
+  int elements_sum = gr_get_height(installing_text_.get()) + PixelsFromDp(kLayouts[layout_][TEXT]) +
                      gr_get_height(progress_bar_fill_.get());
+  if (const GRSurface* frame = GetCurrentFrame(); frame != nullptr) {
+    elements_sum += gr_get_height(frame) + PixelsFromDp(kLayouts[layout_][ICON]);
+  }
   int bottom_gap = (ScreenHeight() - elements_sum) / 2;
   return ScreenHeight() - bottom_gap - gr_get_height(progress_bar_fill_.get());
 }
@@ -529,11 +528,10 @@ void ScreenRecoveryUI::draw_background_locked() {
   }
 }
 
-// Draws the animation and progress bar (if any) on the screen. Does not flip pages. Should only be
+// Draws the icon and progress bar (if any) on the screen. Does not flip pages. Should only be
 // called with updateMutex locked.
 void ScreenRecoveryUI::draw_foreground_locked() {
-  if (current_icon_ != NONE) {
-    const auto& frame = GetCurrentFrame();
+  if (const GRSurface* frame = GetCurrentFrame(); frame != nullptr) {
     int frame_width = gr_get_width(frame);
     int frame_height = gr_get_height(frame);
     int frame_x = (ScreenWidth() - frame_width) / 2;
@@ -1031,23 +1029,6 @@ void ScreenRecoveryUI::ProgressThreadLoop() {
     {
       std::lock_guard<std::mutex> lg(updateMutex);
 
-      // update the installation animation, if active
-      // skip this if we have a text overlay (too expensive to update)
-      if ((current_icon_ == INSTALLING_UPDATE || current_icon_ == ERASING) && !show_text) {
-        if (!intro_done_) {
-          if (current_frame_ == intro_frames_.size() - 1) {
-            intro_done_ = true;
-            current_frame_ = 0;
-          } else {
-            ++current_frame_;
-          }
-        } else {
-          current_frame_ = (current_frame_ + 1) % loop_frames_.size();
-        }
-
-        redraw = true;
-      }
-
       // move the progress bar forward on timed intervals, if configured
       int duration = progressScopeDuration;
       if (progressBarType == DETERMINATE && duration > 0) {
@@ -1232,46 +1213,6 @@ bool ScreenRecoveryUI::Init(const std::string& locale) {
 
 std::string ScreenRecoveryUI::GetLocale() const {
   return locale_;
-}
-
-void ScreenRecoveryUI::LoadAnimation() {
-  std::unique_ptr<DIR, decltype(&closedir)> dir(opendir(Paths::Get().resource_dir().c_str()),
-                                                closedir);
-  dirent* de;
-  std::vector<std::string> intro_frame_names;
-  std::vector<std::string> loop_frame_names;
-
-  while ((de = readdir(dir.get())) != nullptr) {
-    int value, num_chars;
-    if (sscanf(de->d_name, "intro%d%n.png", &value, &num_chars) == 1) {
-      intro_frame_names.emplace_back(de->d_name, num_chars);
-    } else if (sscanf(de->d_name, "loop%d%n.png", &value, &num_chars) == 1) {
-      loop_frame_names.emplace_back(de->d_name, num_chars);
-    }
-  }
-
-  size_t intro_frames = intro_frame_names.size();
-  size_t loop_frames = loop_frame_names.size();
-
-  // It's okay to not have an intro.
-  if (intro_frames == 0) intro_done_ = true;
-  // But you must have an animation.
-  if (loop_frames == 0) abort();
-
-  std::sort(intro_frame_names.begin(), intro_frame_names.end());
-  std::sort(loop_frame_names.begin(), loop_frame_names.end());
-
-  intro_frames_.clear();
-  intro_frames_.reserve(intro_frames);
-  for (const auto& frame_name : intro_frame_names) {
-    intro_frames_.emplace_back(LoadBitmap(frame_name));
-  }
-
-  loop_frames_.clear();
-  loop_frames_.reserve(loop_frames);
-  for (const auto& frame_name : loop_frame_names) {
-    loop_frames_.emplace_back(LoadBitmap(frame_name));
-  }
 }
 
 void ScreenRecoveryUI::SetBackground(Icon icon) {

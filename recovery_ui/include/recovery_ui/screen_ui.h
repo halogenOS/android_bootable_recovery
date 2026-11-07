@@ -171,7 +171,7 @@ class TextMenu : public Menu {
 
   // The number of displayable items is only known after we started drawing the menu (to consider logo, header, etc.)
   // Make it settable after the menu is created
-  void SetMenuHeight(int height) {
+  void SetMenuHeight(int height) override {
     if (!calibrated_height_) {
       max_display_items_ = height / draw_funcs_.MenuItemHeight();
       menu_start_ = std::max(0, (int)selection_ - (int)max_display_items_ + 1);
@@ -360,7 +360,7 @@ class ScreenRecoveryUI : public RecoveryUI, public DrawInterface {
   const int margin_width_;
   const int margin_height_;
 
-  // Number of frames per sec (default: 30) for both parts of the animation.
+  // Number of frames per sec (default: 30) for the progress bar.
   const int animation_fps_;
 
   // The scale factor from dp to pixels. 1.0 for mdpi, 4.0 for xxxhdpi.
@@ -420,7 +420,7 @@ class ScreenRecoveryUI : public RecoveryUI, public DrawInterface {
   void PutChar(char);
   void ClearText();
 
-  virtual void LoadAnimation();
+  virtual void LoadAnimation() {}
   std::unique_ptr<GRSurface> LoadBitmap(const std::string& filename);
   std::unique_ptr<GRSurface> LoadLocalizedBitmap(const std::string& filename);
 
@@ -479,14 +479,8 @@ class ScreenRecoveryUI : public RecoveryUI, public DrawInterface {
   std::unique_ptr<GRSurface> back_icon_sel_;
   std::unique_ptr<GRSurface> fastbootd_logo_;
 
-  // current_icon_ points to one of the frames in intro_frames_ or loop_frames_, indexed by
-  // current_frame_, or error_icon_.
   Icon current_icon_;
   std::unique_ptr<GRSurface> error_icon_;
-  std::vector<std::unique_ptr<GRSurface>> intro_frames_;
-  std::vector<std::unique_ptr<GRSurface>> loop_frames_;
-  size_t current_frame_;
-  bool intro_done_;
 
   // progress_bar and stage_marker images.
   std::unique_ptr<GRSurface> progress_bar_empty_;

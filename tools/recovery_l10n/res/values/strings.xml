@@ -32,7 +32,7 @@
        LIMIT=60] -->
   <string name="recovery_error">Error!</string>
 
-  <!-- Displayed on the screen beneath the animation while the
+  <!-- Displayed on the screen above the progress bar while the
        system is installing a security update. [CHAR LIMIT=60] -->
   <string name="recovery_installing_security">Installing security update</string>
 

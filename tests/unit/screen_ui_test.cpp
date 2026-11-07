@@ -23,9 +23,7 @@
 #include <string>
 #include <vector>
 
-#include <android-base/file.h>
 #include <android-base/logging.h>
-#include <android-base/stringprintf.h>
 #include <gtest/gtest.h>
 #include <gtest/gtest_prod.h>
 
@@ -311,8 +309,6 @@ class TestableScreenRecoveryUI : public ScreenRecoveryUI {
   FRIEND_TEST(DISABLED_ScreenRecoveryUITest, Init);
   FRIEND_TEST(DISABLED_ScreenRecoveryUITest, RtlLocale);
   FRIEND_TEST(DISABLED_ScreenRecoveryUITest, RtlLocaleWithSuffix);
-  FRIEND_TEST(DISABLED_ScreenRecoveryUITest, LoadAnimation);
-  FRIEND_TEST(DISABLED_ScreenRecoveryUITest, LoadAnimation_MissingAnimation);
 
   std::vector<KeyCode> key_buffer_;
   size_t key_buffer_index_;
@@ -515,48 +511,6 @@ TEST_F(DISABLED_ScreenRecoveryUITest, ShowMenuWithInterrupt) {
             ui_->ShowMenu(HEADERS, ITEMS, 0, true,
                           std::bind(&TestableScreenRecoveryUI::KeyHandler, ui_.get(),
                                     std::placeholders::_1, std::placeholders::_2)));
-}
-
-TEST_F(DISABLED_ScreenRecoveryUITest, LoadAnimation) {
-  RETURN_IF_NO_GRAPHICS;
-
-  ASSERT_TRUE(ui_->Init(kTestLocale));
-  // Make a few copies of loop00000.png from testdata.
-  std::string image_data;
-  ASSERT_TRUE(android::base::ReadFileToString(testdata_dir_ + "/loop00000.png", &image_data));
-
-  std::vector<std::string> tempfiles;
-  TemporaryDir resource_dir;
-  for (const auto& name : { "00002", "00100", "00050" }) {
-    tempfiles.push_back(android::base::StringPrintf("%s/loop%s.png", resource_dir.path, name));
-    ASSERT_TRUE(android::base::WriteStringToFile(image_data, tempfiles.back()));
-  }
-  for (const auto& name : { "00", "01" }) {
-    tempfiles.push_back(android::base::StringPrintf("%s/intro%s.png", resource_dir.path, name));
-    ASSERT_TRUE(android::base::WriteStringToFile(image_data, tempfiles.back()));
-  }
-  Paths::Get().set_resource_dir(resource_dir.path);
-
-  ui_->LoadAnimation();
-
-  ASSERT_EQ(2u, ui_->intro_frames_.size());
-  ASSERT_EQ(3u, ui_->loop_frames_.size());
-
-  for (const auto& name : tempfiles) {
-    ASSERT_EQ(0, unlink(name.c_str()));
-  }
-}
-
-TEST_F(DISABLED_ScreenRecoveryUITest, LoadAnimation_MissingAnimation) {
-  RETURN_IF_NO_GRAPHICS;
-
-  ASSERT_TRUE(ui_->Init(kTestLocale));
-  // We need a dir that doesn't contain any animation. However, using TemporaryDir will give
-  // leftovers since this is a death test where TemporaryDir::~TemporaryDir() won't be called.
-  Paths::Get().set_resource_dir("/proc/self");
-
-  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-  ASSERT_EXIT(ui_->LoadAnimation(), ::testing::KilledBySignal(SIGABRT), "");
 }
 
 #undef RETURN_IF_NO_GRAPHICS
